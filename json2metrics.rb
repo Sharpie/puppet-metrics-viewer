@@ -306,15 +306,54 @@ def influx_metrics(data, timestamp, parent_key = nil)
 end
 
 $options = {}
-OptionParser.new do |opt|
-  opt.on('--pattern PATTERN') { |o| $options[:pattern] = o }
-  opt.on('--netcat HOST') { |o| $options[:host] = o }
-  opt.on('--convert-to FORMAT') { |o| $options[:output_format] = o }
-  opt.on('--server-tag SERVER_NAME') { |o| $options[:server_tag] = o }
+parser = OptionParser.new do |opt|
+  opt.banner = "Usage: json2metrics.rb [options] [filename_1 ... filename_n]"
+
+  # NOTE: Help text must be passed as multiple arguments in order to get
+  # nicely wrapped lines in the output.
+  opt.on('-h', '--help', 'Display this help.') do
+    puts opt.help
+    exit 0
+  end
+  opt.on('--pattern PATTERN',
+    'A file name pattern that will be expanded and added ',
+    'to the list of input files. Can contain globs.') do |o|
+    $options[:pattern] = o
+  end
+  opt.on('--convert-to FORMAT',
+    'Line protocol format for output. Can be either ',
+    'graphite or influxdb. Defaults to graphite.') do |o|
+    $options[:output_format] = o
+  end
+  opt.on('--netcat HOST',
+    'Hostname to write metrics to. Graphite format ',
+    'will be sent to port 2003, influxdb to port 8086.') do |o|
+    $options[:host] = o
+  end
+  opt.on('--server-tag SERVER_NAME',
+    'Override the server name assigned to metrics. ',
+    'Useful when JSON output records the server name ',
+    'as 127.0.0.1, or something else that isn\'t meaningful.') do |o|
+    $options[:server_tag] = o
+  end
 
   # InfluxDB options
-  opt.on('--influx-db DATABASE_NAME') {|o| $options[:influx_db] = o }
-end.parse!
+  opt.on('--influx-db DATABASE_NAME',
+    'Destination database for influxdb metrics. ',
+    'Required when --netcat is used with influxdb format.') do |o|
+    $options[:influx_db] = o
+  end
+end
+
+parser.parse!
+
+data_files = ARGV
+data_files += Dir.glob($options[:pattern]) if $options[:pattern]
+
+if data_files.empty?
+  puts(parser.help)
+  exit 0
+end
 
 if $options[:host]
   url = case $options[:output_format]
@@ -327,9 +366,6 @@ if $options[:host]
 
   $net_output = NetworkOutput.new(url)
 end
-
-data_files = ARGV
-data_files += Dir.glob($options[:pattern]) if $options[:pattern]
 
 data_files.each do |filename|
   begin
