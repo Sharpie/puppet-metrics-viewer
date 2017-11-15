@@ -62,9 +62,7 @@ class NetworkOutput
   end
 end
 
-def parse_file(filename)
-  data = JSON.parse(File.read(filename))
-
+def parse_data(data)
   # Newer versions of the log tool insert a timestamp field into the JSON.
   if data['timestamp']
     timestamp = Time.parse(data.delete('timestamp'))
@@ -307,7 +305,7 @@ end
 
 $options = {}
 parser = OptionParser.new do |opt|
-  opt.banner = "Usage: json2metrics.rb [options] [filename_1 ... filename_n]"
+  opt.banner = "Usage: json2metrics.rb [options] [filename_1 ... filename_n|-]"
 
   # NOTE: Help text must be passed as multiple arguments in order to get
   # nicely wrapped lines in the output.
@@ -369,7 +367,14 @@ end
 
 data_files.each do |filename|
   begin
-    converted_data = parse_file(filename)
+    input = case filename
+            when '-'
+              JSON.parse(STDIN.read)
+            else
+              JSON.parse(File.read(filename))
+            end
+
+    converted_data = parse_data(input)
 
     if $options[:host]
       $net_output.write(converted_data)
