@@ -53,7 +53,7 @@ NUM_DEL=$(find "$datadir" -type f -mtime +$RETENTION_DAYS -iname "*.json" -delet
 echo "Deleted $NUM_DEL files past retention_days"
 
 echo "Loading data..."
-../json2graphite.rb --pattern "$datadir/"'**/*.json' --netcat localhost
+../json2metrics.rb --convert-to graphite --pattern "$datadir/"'**/*.json' --netcat localhost
 
 echo
 echo "Metrics ready! View at http://localhost:3000"
